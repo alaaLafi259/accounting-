@@ -23,14 +23,14 @@ export const DEFAULT_INCOME_CATEGORIES = [
 ]
 
 export const DEFAULT_ACCOUNTS = [
-  { code: '1000', name: 'الصندوق (نقدية)', type: 'أصول' },
-  { code: '1010', name: 'البنك', type: 'أصول' },
-  { code: '1100', name: 'العملاء (ذمم مدينة)', type: 'أصول' },
-  { code: '2000', name: 'الموردون (ذمم دائنة)', type: 'خصوم' },
-  { code: '2100', name: 'ضريبة القيمة المضافة المستحقة', type: 'خصوم' },
-  { code: '3000', name: 'رأس المال', type: 'حقوق ملكية' },
-  { code: '4000', name: 'إيرادات المبيعات', type: 'إيرادات' },
-  { code: '5000', name: 'مصروفات تشغيلية', type: 'مصروفات' },
+  { code: '1000', name: 'الصندوق (نقدية)', type: 'أصول', parentId: null },
+  { code: '1010', name: 'البنك', type: 'أصول', parentId: null },
+  { code: '1100', name: 'العملاء (ذمم مدينة)', type: 'أصول', parentId: null },
+  { code: '2000', name: 'الموردون (ذمم دائنة)', type: 'خصوم', parentId: null },
+  { code: '2100', name: 'ضريبة القيمة المضافة المستحقة', type: 'خصوم', parentId: null },
+  { code: '3000', name: 'رأس المال', type: 'حقوق ملكية', parentId: null },
+  { code: '4000', name: 'إيرادات المبيعات', type: 'إيرادات', parentId: null },
+  { code: '5000', name: 'مصروفات تشغيلية', type: 'مصروفات', parentId: null },
 ]
 
 export const TASK_PRIORITIES = [

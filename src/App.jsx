@@ -4,6 +4,9 @@ import AppLayout from './components/layout/AppLayout'
 import Dashboard from './pages/Dashboard'
 import CalculatorPage from './pages/Calculator'
 import Invoices from './pages/Invoices'
+import Clients from './pages/Clients'
+import Suppliers from './pages/Suppliers'
+import Accounts from './pages/Accounts'
 import Transactions from './pages/Transactions'
 import JournalEntries from './pages/JournalEntries'
 import Tasks from './pages/Tasks'
@@ -21,6 +24,9 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/calculator" element={<CalculatorPage />} />
             <Route path="/invoices" element={<Invoices />} />
+            <Route path="/clients" element={<Clients />} />
+            <Route path="/suppliers" element={<Suppliers />} />
+            <Route path="/accounts" element={<Accounts />} />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/journal" element={<JournalEntries />} />
             <Route path="/tasks" element={<Tasks />} />

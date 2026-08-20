@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2, Eye, FileText } from 'lucide-react'
 import Page from '../components/layout/Page'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
+import Badge from '../components/ui/Badge'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import EmptyState from '../components/ui/EmptyState'
 import SearchInput from '../components/ui/SearchInput'
@@ -13,10 +14,14 @@ import { useCollection } from '../hooks/useCollection'
 import { COLLECTIONS } from '../lib/storage'
 import { formatCurrency, formatDate } from '../lib/format'
 import { useSettings } from '../context/SettingsContext'
+import { findOrCreateByName } from '../lib/upsert'
+import { syncInvoiceJournalEntry, removeInvoiceJournalEntry } from '../lib/autoJournal'
 
 export default function Invoices() {
   const { items, loading, add, edit, remove } = useCollection(COLLECTIONS.INVOICES)
-  const { getNextInvoiceNumber } = useSettings()
+  const { items: clients, add: addClient } = useCollection(COLLECTIONS.CLIENTS)
+  const { items: journalItems, add: addJournal, edit: editJournal, remove: removeJournal } = useCollection(COLLECTIONS.JOURNAL_ENTRIES)
+  const { getNextInvoiceNumber, getNextJournalNumber } = useSettings()
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [viewing, setViewing] = useState(null)
@@ -40,9 +45,37 @@ export default function Invoices() {
   }
 
   const handleSave = async (invoiceData) => {
-    if (editing) await edit(editing.id, invoiceData)
-    else await add(invoiceData)
+    const clientId = await findOrCreateByName(clients, invoiceData.clientName, addClient)
+    const payload = { ...invoiceData, clientId }
+
+    let savedId = editing?.id
+    if (editing) {
+      await edit(editing.id, payload)
+    } else {
+      const created = await add(payload)
+      savedId = created.id
+    }
+
+    await syncInvoiceJournalEntry({
+      invoice: payload,
+      invoiceId: savedId,
+      journalItems,
+      addJournal,
+      editJournal,
+      getNextJournalNumber,
+    })
+
     setFormOpen(false)
+  }
+
+  const handleDelete = async (id) => {
+    await removeInvoiceJournalEntry({ invoiceId: id, journalItems, removeJournal })
+    await remove(id)
+  }
+
+  const toggleStatus = async (inv) => {
+    const status = inv.status === 'paid' ? 'unpaid' : 'paid'
+    await edit(inv.id, { status })
   }
 
   return (
@@ -80,6 +113,7 @@ export default function Invoices() {
                 <Th>رقم الفاتورة</Th>
                 <Th>التاريخ</Th>
                 <Th>العميل</Th>
+                <Th>الحالة</Th>
                 <Th className="text-end">الإجمالي</Th>
                 <Th></Th>
               </Thead>
@@ -89,6 +123,13 @@ export default function Invoices() {
                     <Td className="font-medium tabular">{inv.number}</Td>
                     <Td className="whitespace-nowrap tabular">{formatDate(inv.date)}</Td>
                     <Td className="max-w-[200px] truncate">{inv.clientName}</Td>
+                    <Td>
+                      <button onClick={() => toggleStatus(inv)}>
+                        <Badge tone={inv.status === 'paid' ? 'success' : 'warning'}>
+                          {inv.status === 'paid' ? 'مدفوعة' : 'غير مدفوعة'}
+                        </Badge>
+                      </button>
+                    </Td>
                     <Td className="text-end tabular font-medium text-primary">{formatCurrency(inv.total)}</Td>
                     <Td>
                       <div className="flex items-center gap-1 justify-end">
@@ -117,13 +158,14 @@ export default function Invoices() {
         onSave={handleSave}
         initial={editing}
         getNextNumber={getNextInvoiceNumber}
+        clients={clients}
       />
       <InvoiceViewModal open={!!viewing} onClose={() => setViewing(null)} invoice={viewing} />
       <ConfirmDialog
         open={!!confirmId}
         onClose={() => setConfirmId(null)}
-        onConfirm={() => remove(confirmId)}
-        message="سيتم حذف هذه الفاتورة نهائيًا ولن يمكن التراجع عن ذلك."
+        onConfirm={() => handleDelete(confirmId)}
+        message="سيتم حذف هذه الفاتورة والقيد المحاسبي المرتبط بها نهائيًا ولن يمكن التراجع عن ذلك."
       />
     </Page>
   )

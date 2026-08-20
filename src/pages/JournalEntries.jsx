@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Plus, Pencil, Trash2, BookOpen, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Plus, Pencil, Trash2, BookOpen, CheckCircle2, AlertCircle, Lock } from 'lucide-react'
 import Page from '../components/layout/Page'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -10,12 +10,15 @@ import SearchInput from '../components/ui/SearchInput'
 import { Table, Thead, Th, Tr, Td } from '../components/ui/Table'
 import JournalFormModal from '../components/journal/JournalFormModal'
 import { useCollection } from '../hooks/useCollection'
+import { useSeededCollection } from '../hooks/useSeededCollection'
 import { COLLECTIONS } from '../lib/storage'
 import { formatCurrency, formatDate } from '../lib/format'
 import { useSettings } from '../context/SettingsContext'
+import { DEFAULT_ACCOUNTS } from '../data/defaults'
 
 export default function JournalEntries() {
   const { items, loading, add, edit, remove } = useCollection(COLLECTIONS.JOURNAL_ENTRIES)
+  const { items: accounts } = useSeededCollection(COLLECTIONS.ACCOUNTS, DEFAULT_ACCOUNTS)
   const { getNextJournalNumber } = useSettings()
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -34,6 +37,7 @@ export default function JournalEntries() {
     setFormOpen(true)
   }
   const openEdit = (entry) => {
+    if (entry.auto) return
     setEditing(entry)
     setFormOpen(true)
   }
@@ -85,12 +89,27 @@ export default function JournalEntries() {
                       {balanced ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
                       {balanced ? 'متوازن' : 'غير متوازن'}
                     </Badge>
+                    {entry.auto && (
+                      <Badge tone="primary">
+                        <Lock size={11} /> تلقائي من فاتورة
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => openEdit(entry)} className="p-1.5 rounded-md text-ink-faint hover:text-primary hover:bg-primary-soft">
+                    <button
+                      onClick={() => openEdit(entry)}
+                      disabled={entry.auto}
+                      title={entry.auto ? 'عدّل الفاتورة المرتبطة لتحديث هذا القيد' : 'تعديل'}
+                      className="p-1.5 rounded-md text-ink-faint hover:text-primary hover:bg-primary-soft disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                    >
                       <Pencil size={15} />
                     </button>
-                    <button onClick={() => setConfirmId(entry.id)} className="p-1.5 rounded-md text-ink-faint hover:text-danger hover:bg-danger-soft">
+                    <button
+                      onClick={() => !entry.auto && setConfirmId(entry.id)}
+                      disabled={entry.auto}
+                      title={entry.auto ? 'احذف الفاتورة المرتبطة لحذف هذا القيد' : 'حذف'}
+                      className="p-1.5 rounded-md text-ink-faint hover:text-danger hover:bg-danger-soft disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                    >
                       <Trash2 size={15} />
                     </button>
                   </div>
@@ -129,6 +148,7 @@ export default function JournalEntries() {
         onSave={handleSave}
         initial={editing}
         getNextNumber={getNextJournalNumber}
+        accounts={accounts}
       />
       <ConfirmDialog
         open={!!confirmId}

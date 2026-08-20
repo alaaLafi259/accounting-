@@ -88,5 +88,7 @@ export const COLLECTIONS = {
   TASKS: 'tasks',
   CATEGORIES: 'categories',
   ACCOUNTS: 'accounts',
+  CLIENTS: 'clients',
+  SUPPLIERS: 'suppliers',
   SETTINGS: 'settings',
 }

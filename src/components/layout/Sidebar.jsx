@@ -10,6 +10,9 @@ import {
   Settings,
   Languages,
   X,
+  Network,
+  Users,
+  Truck,
 } from 'lucide-react'
 import { useSettings } from '../../context/SettingsContext'
 
@@ -17,7 +20,10 @@ const NAV_ITEMS = [
   { to: '/', label: 'لوحة التحكم', icon: LayoutDashboard, end: true },
   { to: '/calculator', label: 'الحاسبة المحاسبية', icon: Calculator },
   { to: '/invoices', label: 'الفواتير', icon: FileText },
+  { to: '/clients', label: 'العملاء', icon: Users },
+  { to: '/suppliers', label: 'الموردون', icon: Truck },
   { to: '/transactions', label: 'الإيرادات والمصروفات', icon: ArrowLeftRight },
+  { to: '/accounts', label: 'دليل الحسابات', icon: Network },
   { to: '/journal', label: 'القيود المحاسبية', icon: BookOpen },
   { to: '/tasks', label: 'إدارة المهام', icon: ListChecks },
   { to: '/number-to-words', label: 'تحويل الأرقام لكلمات', icon: Languages },

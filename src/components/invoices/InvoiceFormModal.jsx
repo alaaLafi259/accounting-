@@ -17,6 +17,7 @@ function emptyInvoice(taxRate) {
     number: '',
     date: todayISO(),
     clientName: '',
+    status: 'unpaid',
     taxRate,
     items: [emptyLine()],
   }
@@ -33,7 +34,7 @@ function calcLine(line) {
   return { subtotal, discountAmount, afterDiscount: subtotal - discountAmount }
 }
 
-export default function InvoiceFormModal({ open, onClose, onSave, initial, getNextNumber }) {
+export default function InvoiceFormModal({ open, onClose, onSave, initial, getNextNumber, clients = [] }) {
   const { settings } = useSettings()
   const [invoice, setInvoice] = useState(() => emptyInvoice(settings.taxRate))
 
@@ -96,7 +97,34 @@ export default function InvoiceFormModal({ open, onClose, onSave, initial, getNe
             required
             value={invoice.clientName}
             onChange={(e) => setInvoice((i) => ({ ...i, clientName: e.target.value }))}
+            list="client-options"
           />
+        </div>
+        <datalist id="client-options">
+          {clients.map((c) => (
+            <option key={c.id} value={c.name} />
+          ))}
+        </datalist>
+
+        <div>
+          <span className="block text-sm font-medium text-ink-soft mb-1.5">حالة السداد</span>
+          <div className="grid grid-cols-2 gap-2 p-1 bg-surface-alt rounded-lg max-w-xs">
+            {[
+              { id: 'unpaid', label: 'غير مدفوعة' },
+              { id: 'paid', label: 'مدفوعة' },
+            ].map((opt) => (
+              <button
+                type="button"
+                key={opt.id}
+                onClick={() => setInvoice((i) => ({ ...i, status: opt.id }))}
+                className={`py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  invoice.status === opt.id ? 'bg-surface shadow-card text-primary' : 'text-ink-soft'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div>

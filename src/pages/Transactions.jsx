@@ -14,6 +14,7 @@ import { useCollection } from '../hooks/useCollection'
 import { COLLECTIONS } from '../lib/storage'
 import { formatCurrency, formatDate, todayISO } from '../lib/format'
 import { add, subtract } from '../lib/calculations'
+import { findOrCreateByName } from '../lib/upsert'
 import { DEFAULT_INCOME_CATEGORIES, DEFAULT_EXPENSE_CATEGORIES } from '../data/defaults'
 
 const EMPTY_FORM = {
@@ -22,10 +23,13 @@ const EMPTY_FORM = {
   date: todayISO(),
   description: '',
   category: '',
+  supplierName: '',
+  paid: true,
 }
 
 export default function Transactions() {
   const { items, loading, add: addItem, edit, remove } = useCollection(COLLECTIONS.TRANSACTIONS)
+  const { items: suppliers, add: addSupplier } = useCollection(COLLECTIONS.SUPPLIERS)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -45,7 +49,11 @@ export default function Transactions() {
       .filter((t) => {
         const q = search.trim().toLowerCase()
         if (!q) return true
-        return (t.description || '').toLowerCase().includes(q) || (t.category || '').toLowerCase().includes(q)
+        return (
+          (t.description || '').toLowerCase().includes(q) ||
+          (t.category || '').toLowerCase().includes(q) ||
+          (t.supplierName || '').toLowerCase().includes(q)
+        )
       })
       .sort((a, b) => new Date(b.date) - new Date(a.date))
   }, [items, search, typeFilter])
@@ -68,13 +76,34 @@ export default function Transactions() {
 
   const openEdit = (t) => {
     setEditingId(t.id)
-    setForm({ type: t.type, amount: t.amount, date: t.date, description: t.description || '', category: t.category || '' })
+    setForm({
+      type: t.type,
+      amount: t.amount,
+      date: t.date,
+      description: t.description || '',
+      category: t.category || '',
+      supplierName: t.supplierName || '',
+      paid: t.paid !== false,
+    })
     setModalOpen(true)
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    const payload = { ...form, amount: Number(form.amount) || 0 }
+    const supplierId =
+      form.type === 'expense' && form.supplierName.trim()
+        ? await findOrCreateByName(suppliers, form.supplierName, addSupplier)
+        : null
+    const payload = {
+      type: form.type,
+      amount: Number(form.amount) || 0,
+      date: form.date,
+      description: form.description,
+      category: form.category,
+      supplierId,
+      supplierName: form.type === 'expense' ? form.supplierName.trim() : '',
+      paid: form.type === 'expense' ? form.paid : true,
+    }
     if (editingId) await edit(editingId, payload)
     else await addItem(payload)
     setModalOpen(false)
@@ -121,7 +150,7 @@ export default function Transactions() {
 
       <Card padded={false}>
         <div className="p-5 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between border-b border-border">
-          <SearchInput value={search} onChange={setSearch} placeholder="ابحث بالوصف أو التصنيف..." className="sm:w-72" />
+          <SearchInput value={search} onChange={setSearch} placeholder="ابحث بالوصف أو التصنيف أو المورد..." className="sm:w-72" />
           <div className="flex gap-2">
             {[
               { id: 'all', label: 'الكل' },
@@ -158,7 +187,7 @@ export default function Transactions() {
                 <Th>النوع</Th>
                 <Th>التاريخ</Th>
                 <Th>الوصف</Th>
-                <Th>التصنيف</Th>
+                <Th>التصنيف / المورد</Th>
                 <Th className="text-end">المبلغ</Th>
                 <Th></Th>
               </Thead>
@@ -166,13 +195,21 @@ export default function Transactions() {
                 {filtered.map((t) => (
                   <Tr key={t.id}>
                     <Td>
-                      <Badge tone={t.type === 'income' ? 'success' : 'danger'}>
-                        {t.type === 'income' ? 'إيراد' : 'مصروف'}
-                      </Badge>
+                      <div className="flex flex-col gap-1">
+                        <Badge tone={t.type === 'income' ? 'success' : 'danger'}>
+                          {t.type === 'income' ? 'إيراد' : 'مصروف'}
+                        </Badge>
+                        {t.type === 'expense' && t.paid === false && <Badge tone="warning">غير مسددة</Badge>}
+                      </div>
                     </Td>
                     <Td className="whitespace-nowrap tabular">{formatDate(t.date)}</Td>
                     <Td className="max-w-[240px] truncate">{t.description || '—'}</Td>
-                    <Td>{t.category || '—'}</Td>
+                    <Td>
+                      <div className="flex flex-col text-sm">
+                        <span>{t.category || '—'}</span>
+                        {t.supplierName && <span className="text-xs text-ink-faint">{t.supplierName}</span>}
+                      </div>
+                    </Td>
                     <Td className={`text-end tabular font-medium ${t.type === 'income' ? 'text-success' : 'text-danger'}`}>
                       {formatCurrency(t.amount)}
                     </Td>
@@ -248,6 +285,35 @@ export default function Transactions() {
               ))}
             </datalist>
           </div>
+
+          {form.type === 'expense' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+              <div>
+                <span className="block text-sm font-medium text-ink-soft mb-1.5">المورد (اختياري)</span>
+                <input
+                  list="supplier-options"
+                  value={form.supplierName}
+                  onChange={(e) => setForm((f) => ({ ...f, supplierName: e.target.value }))}
+                  placeholder="اختر أو أدخل اسم مورد"
+                  className="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm outline-none focus:border-primary"
+                />
+                <datalist id="supplier-options">
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.name} />
+                  ))}
+                </datalist>
+              </div>
+              <label className="flex items-center gap-2 pb-2.5">
+                <input
+                  type="checkbox"
+                  checked={form.paid}
+                  onChange={(e) => setForm((f) => ({ ...f, paid: e.target.checked }))}
+                  className="w-4 h-4 accent-primary"
+                />
+                <span className="text-sm text-ink-soft">تم السداد بالكامل</span>
+              </label>
+            </div>
+          )}
 
           <Textarea
             label="الوصف"

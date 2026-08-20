@@ -6,7 +6,6 @@ import { Input, Textarea } from '../ui/Field'
 import { generateId } from '../../lib/id'
 import { formatCurrency, todayISO } from '../../lib/format'
 import { add } from '../../lib/calculations'
-import { DEFAULT_ACCOUNTS } from '../../data/defaults'
 
 function emptyLine() {
   return { id: generateId(), account: '', debit: '', credit: '' }
@@ -16,7 +15,7 @@ function emptyEntry(number) {
   return { number, date: todayISO(), description: '', lines: [emptyLine(), emptyLine()] }
 }
 
-export default function JournalFormModal({ open, onClose, onSave, initial, getNextNumber }) {
+export default function JournalFormModal({ open, onClose, onSave, initial, getNextNumber, accounts = [] }) {
   const [entry, setEntry] = useState(() => emptyEntry(''))
 
   useEffect(() => {
@@ -121,8 +120,8 @@ export default function JournalFormModal({ open, onClose, onSave, initial, getNe
             </div>
           </div>
           <datalist id="account-options">
-            {DEFAULT_ACCOUNTS.map((a) => (
-              <option key={a.code} value={a.name} />
+            {accounts.map((a) => (
+              <option key={a.id} value={a.name} />
             ))}
           </datalist>
         </div>
